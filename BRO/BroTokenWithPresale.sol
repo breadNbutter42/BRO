@@ -1,4 +1,4 @@
-//Make sure theres no bug where someone can send just AVAX to an empty LP pair and mess up the LP seeding later
+//Make sure theres no bug where someone can send just AVAX to an empty LP pair and mess up the LP seeding later by making token infinitely expensive
 
 /* $BRO Links:
 Medium: https://medium.com/@BROFireAvax
@@ -9,16 +9,15 @@ Website: www.BROFireAvax.com
 Email: contact@BROFireAvax.com
 */
 
-// This is a presale contract for the $BRO token on Avalanche.
+// This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
 // Users can transfer AVAX directly to this contract address during the presale time window.
 // There is a minimum presale buy in amount of 1 AVAX per transfer.
 // LP to be trustlessly created after the presale ends, using half of the $BRO supply and all of the presale AVAX.
 // Presale buyers' $BRO tokens to be trustlessly "airdropped" out after presale ends, aka sent directly to them.
-// Note: There are no whale limits or allowlists for this presale.
+// Note: There are no whale limits or allowlists for the presale, to allow for open and dynamic presale AVAX collection size.
 
 // LP is burned since fees are automatically converted to more LP
 
-//$DRAGON is an ERC20 token that collects fees on transfers, and creates LP with other top community tokens.
 //Base contract imports created with https://wizard.openzeppelin.com/ using their ERC20 with Permit and Ownable.
 
 
@@ -119,10 +118,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
-contract DragonFire is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
+contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
     uint256 public constant SECONDS_FOR_WL = 5 minutes; //Seconds per each phase, for example 5 minutes is 300 seconds
-    uint256 public constant TOTAL_SUPPLY_WEI = 88888888000000000000000000; //88,888,888 DRAGON in wei
+    uint256 public constant TOTAL_SUPPLY_WEI = 88888888000000000000000000; //88,888,888 BRO in wei
     uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; // 50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
     uint256 public constant IDO_Start_Time = 1738666068; //Whitelist phase start time in unix timestamp
@@ -135,14 +134,14 @@ contract DragonFire is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
     address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
-    address public constant Router_Address = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main Dragon/AVAX LP dex router
+    address public constant Router_Address = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main BRO/AVAX LP dex router
     //TraderJoe router = C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4 ; Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
 
 
-    ITJUniswapV2Router01 public lfjV1Router; //DEX router interface for swapping Dragon and making all LP pairs on our own new dex
+    ITJUniswapV2Router01 public lfjV1Router; //DEX router interface for swapping BRO and making all LP pairs on our own new dex
 
     address[] public presaleBuyers = new address[](0); //Array to store presale buyers addresses to send BRO tokens to later and for WL phase checks
-    address public lfjV1PairAddress  = address(0); //Swap with this pair DRAGON/WAVAX
+    address public lfjV1PairAddress  = address(0); //Swap with this pair BRO/WAVAX
 
     bool public lpSeeded = false; //Block trading until LP is seeded
     bool public airdropCompleted = false; //Flag to indicate when airdrop is completed
@@ -203,12 +202,12 @@ contract DragonFire is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    //Change name and symbol to Dragon, DRAGON for actual deployment
+    //Change name and symbol to Bro, BRO for actual deployment
     constructor()
     ERC20("Test", "TST")
     ERC20Permit("Test")
     Ownable(msg.sender)
-    { //This ERC20 constructor creates our DRAGON token name and symbol. 
+    { //This ERC20 constructor creates our BRO token name and symbol. 
 
         require(IDO_Start_Time > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
         require(IDO_Start_Time < block.timestamp + 91 days, "IDO start time cannot be more than 91 days from now");
@@ -221,7 +220,7 @@ contract DragonFire is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         address lfjV1PairAddress_;
         
         lfjV1Router_ = ITJUniswapV2Router01(Router_Address);
-          //Initialize Uniswap V2 DRAGON/WAVAX LP pair, with 0 LP tokens in it to start with
+          //Initialize Uniswap V2 BRO/WAVAX LP pair, with 0 LP tokens in it to start with
         try lfjV1PairAddress_ = IUniswapV2Factory(lfjV1Router_.factory()).createPair(address(this), WAVAX_ADDRESS);
         {} 
         catch {
@@ -469,10 +468,6 @@ contract DragonFire is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 }
-
-//"May the dragon's song bring harmony." -Harmony Scales
-
-
 
 
 
