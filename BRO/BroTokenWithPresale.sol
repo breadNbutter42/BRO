@@ -1,4 +1,4 @@
-//Make sure theres no bug where someone can send just AVAX to an empty LP pair and mess up the LP seeding later by making token infinitely expensive
+//Make sure theres no bug where someone can send just AVAX to an empty LP pair and mess up the LP seeding later by making token infinitely expensive, though maybe if they could we could just withdraw it for free
 
 /* $BRO Links:
 Medium: https://medium.com/@BROFireAvax
@@ -220,18 +220,14 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         address lfjV1PairAddress_;
         
         lfjV1Router_ = ITJUniswapV2Router01(Router_Address);
-          //Initialize Uniswap V2 BRO/WAVAX LP pair, with 0 LP tokens in it to start with
-        try lfjV1PairAddress_ = IUniswapV2Factory(lfjV1Router_.factory()).createPair(address(this), WAVAX_ADDRESS);
-        {} 
-        catch {
-            revert(string("initPairLFJV1() failed"));
-        }
+
+        //Initialize Uniswap V2 BRO/WAVAX LP pair, with 0 LP tokens in it to start with
+        lfjV1PairAddress_ = IUniswapV2Factory(lfjV1Router_.factory()).createPair(address(this), WAVAX_ADDRESS);
 
         lfjV1Router = lfjV1Router_; //Uses the interface created above
         lfjV1PairAddress = lfjV1PairAddress_; //Uses the pair address created above
 
         super._update(address(0), address(this), TOTAL_SUPPLY_WEI); //Mint total supply to this contract to make LP and presale
-        emit SettingsChanged(msg.sender, "constructor");
     }
 
 
@@ -254,30 +250,26 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function tradingPhase() public view returns (uint256 phase) { //Check the phase
+    function tradingPhase() public view returns (uint256 phase_) { //Check the phase
         uint256 timeNow_ = block.timestamp;
 
-        if (!tradingActive) {
+        if (!tradingActive()) {
             if (timeNow_ < PRESALE_END_TIME) {
                 return 0; //0 == Presale
             } 
-            else if (timeNow_ < IDO_Start_Time) {
-                if (!lpSeeded) {
-                    return 1; //1 == LP seeding
-                } 
-                else {
-                    return 2; //2 == Presale token dispersal
-                } 
-            }
+            else if (!lpSeeded) {
+                return 1; //1 == LP seeding
+            } 
+            else {
+                return 2; //2 == Presale token dispersal is allowed
+            } 
         } 
-        else if (tradingRestricted) { //If trading is active and restricted then it's the whitelist phase
+        else if (tradingRestricted()) { //If trading is active and restricted then it's the whitelist phase
             return 3; //3 == Whitelist IDO launch
         } 
         else { //If trading is active and not restricted then it's the public phase
             return 4; //4 == Public trading
         }
-
-        return phase_;
     }
 
 
@@ -295,7 +287,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
         // Approve BRO tokens for transfer by the router
-        approve(Router_Address, BroForLFJWeiV1);
+        _approve(address(this), Router_Address, LP_BRO_SUPPLY_WEI); //Approve main router to use our DRAGON tokens and make LP
+
 
         try
         lfjV1Router.addLiquidityAVAX{value: totalAvaxPresaleWei}( //Seed LFJ V1 LP with all avax collected during presale
@@ -361,7 +354,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         if (to_ != lfjV1PairAddress) { //Don't limit selling or LP creation during IDO
             require(tradingPhase_ == 3, "Whitelist IDO phase is not yet active");
             totalPurchasedWithWhitelist[to_] += amountTokensToTransfer_; //Track total amount of tokens user receives during the whitelist phase
-            amountPresaleTokensPurchased_ = presaleTokensPurchased(to_);
+            uint256 amountPresaleTokensPurchased_ = presaleTokensPurchased(to_);
             require(totalPurchasedWithWhitelist[to_] <= amountPresaleTokensPurchased_, "During whitelist phase, you cannot receive more tokens than purchased in the presale");
         }
     }
