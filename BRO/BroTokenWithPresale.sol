@@ -126,7 +126,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
     uint256 public constant IDO_Start_Time = 1738666068; //Whitelist phase start time in unix timestamp
     uint256 public constant PRESALE_END_TIME = IDO_Start_Time - 120 minutes; //LP seeding start time in unix timestamp, must be before IDO_Start_Time
-    uint256 public constant AIRDROP_TIME = IDO_Start_Time - 120 minutes; //Date presale tokens dispersal starts, can set to before or after IDO_Start_Time
+    uint256 public constant AIRDROP_TIME = IDO_Start_Time - 119 minutes; //Date presale tokens dispersal starts, leave a buffer since miners can vary timestamp slightly
     uint256 public constant MINIMUM_BUY_WEI = 1000000000000000000; //1 AVAX in wei minimum buy, to prevent micro buy spam attack hurting the airdrop phase
     uint256 public constant TOTAL_PHASES = 4; 
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
@@ -254,7 +254,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         uint256 timeNow_ = block.timestamp;
 
         if (!tradingActive()) {
-            if (timeNow_ < PRESALE_END_TIME) {
+            if (timeNow_ < PRESALE_END_TIME + 1 minutes) { //Add a one minute buffer in case of miner timestamp variance
                 return 0; //0 == Presale
             } 
             else if (!lpSeeded) {
@@ -283,7 +283,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function seedLpV1LFJ() public nonReentrant { //1. This function must be called once, after the presale ends
+    function seedLP() public nonReentrant { //1. This function must be called once, after the presale ends
+        require (block.timestamp >= PRESALE_END_TIME + 1 minutes); //Add a one minute buffer in case of miner timestamp variance
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
         // Approve BRO tokens for transfer by the router
@@ -300,7 +301,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
             block.timestamp)
         {}
         catch {
-            revert(string("seedLpV1LFJ() failed"));
+            revert(string("seedLP() failed"));
         }
 
         lpSeeded = true;
@@ -312,8 +313,17 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         require(lpSeeded, "LP must be seeded before airdrop can start");
         require(!airdropCompleted, "Airdrop has already been completed");
         require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
-        _airdrop();
+        _airdrop(100); //100 max transfers per tx
     }
+
+
+    function airdropBuyers(uint256 maxTransfers_) external nonReentrant { //Alternative airdrop function where users can set max transfers per tx
+        require(lpSeeded, "LP must be seeded before airdrop can start");
+        require(!airdropCompleted, "Airdrop has already been completed");
+        require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
+        _airdrop(maxTransfers_);
+    }
+
 
 
     //Internal functions:
@@ -351,8 +361,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         uint256 amountTokensToTransfer_,
         uint256 tradingPhase_
     ) private {
+        require(tradingPhase_ == 3, "Whitelist IDO phase is not yet active");
         if (to_ != lfjV1PairAddress) { //Don't limit selling or LP creation during IDO
-            require(tradingPhase_ == 3, "Whitelist IDO phase is not yet active");
             totalPurchasedWithWhitelist[to_] += amountTokensToTransfer_; //Track total amount of tokens user receives during the whitelist phase
             uint256 amountPresaleTokensPurchased_ = presaleTokensPurchased(to_);
             require(totalPurchasedWithWhitelist[to_] <= amountPresaleTokensPurchased_, "During whitelist phase, you cannot receive more tokens than purchased in the presale");
@@ -380,8 +390,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function _airdrop() private {
-        uint256 limitCount_ = airdropIndex + 100; //Max amount of addresses to airdrop to per call is 100 addresses
+    function _airdrop(uint256 maxTransfers_) private {
+        uint256 limitCount_ = airdropIndex + maxTransfers_; //Max amount of addresses to airdrop to per call is 100 addresses
         address buyer_;
         uint256 amount_;
 
