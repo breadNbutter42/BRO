@@ -18,7 +18,7 @@ Email: contact@BROFireAvax.com
 
 // LP is burned since fees are automatically converted to more LP
 
-//Base contract imports created with https://wizard.openzeppelin.com/ using their ERC20 with Permit and Ownable.
+// Base token contract imports created with https://wizard.openzeppelin.com/ using their ERC20 with Permit and Ownable.
 
 
 interface IUniswapV2Factory { 
@@ -250,7 +250,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function tradingPhase() public view returns (uint256 phase_) { //Check the phase
+    function tradingPhase() public view returns (uint256) { //Check the phase
         uint256 timeNow_ = block.timestamp;
 
         if (!tradingActive()) {
@@ -309,7 +309,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function airdropBuyers() external nonReentrant { //2. Call as many times as needed to airdrop all presale buyers
+    function airdropBuyers() external { //2. Call as many times as needed to airdrop all presale buyers
         require(lpSeeded, "LP must be seeded before airdrop can start");
         require(!airdropCompleted, "Airdrop has already been completed");
         require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
@@ -317,7 +317,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function airdropBuyers(uint256 maxTransfers_) external nonReentrant { //Alternative airdrop function where users can set max transfers per tx
+    function airdropBuyers(uint256 maxTransfers_) external { //Alternative airdrop function where users can set max transfers per tx
         require(lpSeeded, "LP must be seeded before airdrop can start");
         require(!airdropCompleted, "Airdrop has already been completed");
         require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
@@ -371,6 +371,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
 
     function presaleTokensPurchased(address buyer_) public view returns (uint256) { //Calculate amount of Bro tokens to send to buyer as ratio of AVAX sent
+        require(block.timestamp > PRESALE_END_TIME, "Presale has not yet ended"); //Cannot calculate ratios until all AVAX is collected in presale
         return (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei;
     }
 
@@ -394,12 +395,14 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         uint256 limitCount_ = airdropIndex + maxTransfers_; //Max amount of addresses to airdrop to per call is 100 addresses
         address buyer_;
         uint256 amount_;
+        uint256 localIndex_; 
 
         while (airdropIndex < presaleBuyers.length && airdropIndex < limitCount_) {
-            buyer_ = presaleBuyers[airdropIndex];
-            amount_ = presaleTokensPurchased(buyer_);
+            localIndex_ = airdropIndex;
+            airdropIndex++; // In case of any reentrancy type issues, we increment the global index before sending out tokens
+            buyer_ = presaleBuyers[localIndex_];
+            amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Find amount here instead of with presaleTokensPurchased(), to save gas
             require(transfer(buyer_, amount_), "_airdrop() failed");
-            airdropIndex++;
         }
 
         if (airdropIndex == presaleBuyers.length) {
