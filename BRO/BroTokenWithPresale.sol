@@ -1,5 +1,3 @@
-//Make sure theres no bug where someone can send just AVAX to an empty LP pair and mess up the LP seeding later by making token infinitely expensive, though maybe if they could we could just withdraw it for free
-
 /* $BRO Links:
 Medium: https://medium.com/@BROFireAvax
 Twitter: @BROFireAvax
@@ -121,7 +119,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
     uint256 public constant SECONDS_FOR_WL = 5 minutes; //Seconds per each phase, for example 5 minutes is 300 seconds
-    uint256 public constant TOTAL_SUPPLY_WEI = 88888888000000000000000000; //88,888,888 BRO in wei
+    uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //88,888,888 BRO in wei
     uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; // 50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
     uint256 public constant IDO_Start_Time = 1738666068; //Whitelist phase start time in unix timestamp
@@ -132,9 +130,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
 
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
-    address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
+    address public constant WAVAX_ADDRESS = 0xd00ae08403B9bbb9124bB305C09058E32C39A48c; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
-    address public constant Router_Address = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main BRO/AVAX LP dex router
+    address public constant Router_Address = 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901; //Main BRO/AVAX LP dex router
     //TraderJoe router = C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4 ; Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
 
 
@@ -284,7 +282,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
 
     function seedLP() public nonReentrant { //1. This function must be called once, after the presale ends
-        require (block.timestamp >= PRESALE_END_TIME + 1 minutes); //Add a one minute buffer in case of miner timestamp variance
+        require (block.timestamp >= PRESALE_END_TIME + 1 minutes, "Presale time plus buffer has not yet ended"); //Add a one minute buffer in case of miner timestamp variance
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
         // Approve BRO tokens for transfer by the router
