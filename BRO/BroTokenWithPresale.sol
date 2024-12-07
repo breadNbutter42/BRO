@@ -130,9 +130,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
 
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
-    address public constant WAVAX_ADDRESS = 0xd00ae08403B9bbb9124bB305C09058E32C39A48c; 
+    address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
-    address public constant Router_Address = 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901; //Main BRO/AVAX LP dex router
+    address public constant Router_Address = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main BRO/AVAX LP dex router
     //TraderJoe router = C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4 ; Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
 
 
@@ -227,8 +227,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
         super._update(address(0), address(this), TOTAL_SUPPLY_WEI); //Mint total supply to this contract to make LP and presale
     }
-
-
 
 
 
@@ -390,7 +388,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
 
     function _airdrop(uint256 maxTransfers_) private {
-        uint256 limitCount_ = airdropIndex + maxTransfers_; //Max amount of addresses to airdrop to per call is 100 addresses
+        uint256 limitCount_ = airdropIndex + maxTransfers_; //Max amount of addresses to airdrop
         address buyer_;
         uint256 amount_;
         uint256 localIndex_; 
@@ -400,7 +398,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
             airdropIndex++; // In case of any reentrancy type issues, we increment the global index before sending out tokens
             buyer_ = presaleBuyers[localIndex_];
             amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Find amount here instead of with presaleTokensPurchased(), to save gas
-            require(transfer(buyer_, amount_), "_airdrop() failed");
+            _transfer(address(this), buyer_, amount_); //Send tokens from the contract itself to the presale buyers
+            
         }
 
         if (airdropIndex == presaleBuyers.length) {
@@ -409,6 +408,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
         emit AirdropSent(msg.sender, airdropIndex);
     }
+    
 
 
     //Fallback functions:
