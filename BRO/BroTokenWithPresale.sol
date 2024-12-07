@@ -113,9 +113,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //88,888,888 BRO in wei
     uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; // 50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
-    uint256 public constant IDO_Start_Time = 1738666068; //Whitelist phase start time in unix timestamp
-    uint256 public constant PRESALE_END_TIME = IDO_Start_Time - 120 minutes; //LP seeding start time in unix timestamp, must be before IDO_Start_Time
-    uint256 public constant AIRDROP_TIME = IDO_Start_Time - 119 minutes; //Date presale tokens dispersal starts, leave a buffer since miners can vary timestamp slightly
+    uint256 public constant IDO_START_TIME = 1738666068; //Whitelist phase start time in unix timestamp
+    uint256 public constant PRESALE_END_TIME = IDO_START_TIME - 120 minutes; //LP seeding start time in unix timestamp, must be before IDO_START_TIME
+    uint256 public constant AIRDROP_TIME = IDO_START_TIME - 119 minutes; //Date presale tokens dispersal starts, leave a buffer since miners can vary timestamp slightly
     uint256 public constant MINIMUM_BUY_WEI = 1000000000000000000; //1 AVAX in wei minimum buy, to prevent micro buy spam attack hurting the airdrop phase
     uint256 public constant TOTAL_PHASES = 4; 
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
@@ -123,11 +123,11 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
     address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
-    address public constant Router_Address = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main BRO/AVAX LP dex router
+    address public constant ROUTER_ADDRESS = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; //Main BRO/AVAX LP dex router
     //TraderJoe router = C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4 ; Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
 
 
-    ITJUniswapV2Router01 public lfjV1Router; //DEX router interface for swapping BRO and making all LP pairs on our own new dex
+    ITJUniswapV2Router01 public lfjV1Router; //DEX router interface for swapping BRO and making LP on lfj.gg TraderJoe V1 router
 
     address[] public presaleBuyers = new address[](0); //Array to store presale buyers addresses to send BRO tokens to later and for WL phase checks
     address public lfjV1PairAddress  = address(0); //Swap with this pair BRO/WAVAX
@@ -198,9 +198,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     Ownable(msg.sender)
     { //This ERC20 constructor creates our BRO token name and symbol. 
 
-        require(IDO_Start_Time > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
-        require(IDO_Start_Time < block.timestamp + 91 days, "IDO start time cannot be more than 91 days from now");
-        require(PRESALE_END_TIME < IDO_Start_Time, "Presale end time must be before IDO start time");
+        require(IDO_START_TIME > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
+        require(IDO_START_TIME < block.timestamp + 91 days, "IDO start time cannot be more than 91 days from now");
+        require(PRESALE_END_TIME < IDO_START_TIME, "Presale end time must be before IDO start time");
         require(AIRDROP_TIME > PRESALE_END_TIME, "Airdrop time must be after presale end time");
         require(AIRDROP_TIME <= (PRESALE_END_TIME + 1 days), "Airdrop time must be within 1 day after presale end time");
 
@@ -208,7 +208,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         ITJUniswapV2Router01 lfjV1Router_;
         address lfjV1PairAddress_;
         
-        lfjV1Router_ = ITJUniswapV2Router01(Router_Address);
+        lfjV1Router_ = ITJUniswapV2Router01(ROUTER_ADDRESS);
 
         //Initialize Uniswap V2 BRO/WAVAX LP pair, with 0 LP tokens in it to start with
         lfjV1PairAddress_ = IUniswapV2Factory(lfjV1Router_.factory()).createPair(address(this), WAVAX_ADDRESS);
@@ -216,16 +216,16 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         lfjV1Router = lfjV1Router_; //Uses the interface created above
         lfjV1PairAddress = lfjV1PairAddress_; //Uses the pair address created above
 
-        super._update(address(0), address(this), TOTAL_SUPPLY_WEI); //Mint total supply to this contract to make LP and presale
+        super._update(address(0), address(this), TOTAL_SUPPLY_WEI); //Mint total supply to this contract, to later make LP and presale airdrop
     }
 
 
 
     //Public functions:
 
-    function tradingActive() public view returns (bool) { //Check if IDO_Start_Time happened yet to open trading in general
+    function tradingActive() public view returns (bool) { //Check if IDO_START_TIME happened yet to open trading in general
         if (lpSeeded) {
-            return block.timestamp >= IDO_Start_Time; //Return true if IDO has started
+            return block.timestamp >= IDO_START_TIME; //Return true if IDO has started
         } else {
             return false;
         }
@@ -233,7 +233,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 
 
     function tradingRestricted() public view returns (bool) { //Check if we are in restricted whitelist phase
-        return tradingActive() && block.timestamp <= (IDO_Start_Time + SECONDS_FOR_WL); //True if tradingActive and whitelisted phase is not yet over
+        return tradingActive() && block.timestamp <= (IDO_START_TIME + SECONDS_FOR_WL); //True if tradingActive and whitelisted phase is not yet over
     }
 
 
@@ -248,7 +248,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
                 return 1; //1 == LP seeding
             } 
             else {
-                return 2; //2 == Presale token dispersal is allowed
+                return 2; //2 == Presale airdrop token dispersal is allowed
             } 
         } 
         else if (tradingRestricted()) { //If trading is active and restricted then it's the whitelist phase
@@ -275,7 +275,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
         // Approve BRO tokens for transfer by the router
-        _approve(address(this), Router_Address, LP_BRO_SUPPLY_WEI); //Approve main router to use our DRAGON tokens and make LP
+        _approve(address(this), ROUTER_ADDRESS, LP_BRO_SUPPLY_WEI); //Approve main router to use our DRAGON tokens and make LP
 
 
         try
@@ -388,7 +388,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
             localIndex_ = airdropIndex;
             airdropIndex++; // In case of any reentrancy type issues, we increment the global index before sending out tokens
             buyer_ = presaleBuyers[localIndex_];
-            amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Find amount here instead of with presaleTokensPurchased(), to save gas
+            amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Calculate amount_ here, instead of with the time checked presaleTokensPurchased(), to save gas
             _transfer(address(this), buyer_, amount_); //Send tokens from the contract itself to the presale buyers
             
         }
