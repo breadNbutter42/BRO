@@ -491,7 +491,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 /*
    Launch instructions:
 1. Set the constant values at the start of the contract and the token name and symbol.
-2. Deploy contract with solidity version: 0.8.24, EVM version: Paris, and runs optimized: 200.
+2. Deploy contract with solidity version: 0.8.24, and runs optimized: 200.
 3. Verify contract and set socials on block explorer and dexscreener.
 4. Bug bounty could be good to set up on https://www.sherlock.xyz/ or https://code4rena.com/ or similar.
 5. After presale ends, call seedLP() in presale contract to create LP.
