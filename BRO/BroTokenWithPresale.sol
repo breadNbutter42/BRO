@@ -1,12 +1,3 @@
-/* $BRO Links:
-Medium: https://medium.com/@BROFireAvax
-Twitter: @BROFireAvax
-Discord: https://discord.gg/uczFJdMaf4
-Telegram: BROFireAvax
-Website: www.BROFireAvax.com
-Email: contact@BROFireAvax.com
-*/
-
 // This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
 // Users can transfer AVAX directly to this contract address during the presale time window.
 // There is a minimum presale buy in amount of 1 AVAX per transfer.
