@@ -120,6 +120,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     uint256 public constant TOTAL_PHASES = 4; 
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
 
+    address public constant FEE_WALLET = 0xb886B99ee96Ade23A803E310F33DE94FE0145689; //Wallet to receive fees from any emergency withdrawals
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
     address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
@@ -311,6 +312,22 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         _airdrop(maxTransfers_);
     }
 
+    //This is so users can exit the presale before presale is over. We will still have them in the array of addresses to airdrop but we will reset their totalPurchasedWithWhitelist to 0
+    //To prevent abuse of this function we will charge a 10% withdrawal fee of the avax deposited to the contract, so that during the airdrop we don't have to process a bunch of empty slots
+    function emergencyWithdrawWithFee() external nonReentrant { 
+        if (block.timestamp > PRESALE_END_TIME) { //If presale is over, make sure to give time to make LP, before allowing emergency withdrawal
+            require(!lpSeeded, "LP has already been seeded with users funds; Cannot emergency withdraw AVAX after LP is seeded");
+            require(block.timestamp >= PRESALE_END_TIME + 24 hours, "Cannot emergency withdraw AVAX after presale ends, until 24 hours afterwards, to give time to seed LP first"); 
+        }
+
+        uint256 amount_ = totalAvaxUserSent[msg.sender];
+        require(amount_ > 0, "No AVAX to withdraw");
+        totalAvaxUserSent[msg.sender] = 0; //Reset user's total AVAX sent to 0
+        totalAvaxPresaleWei-= amount_; //Subtract the user's AVAX from the total AVAX sent during presale
+        uint256 fee_ = (amount_ * 10) / 100; //10% fee on withdrawls to prevent spamming the contract with empty airdrop slots
+        payable(FEE_WALLET).transfer(fee_); //Send the fee to the fee collector wallet
+        payable(msg.sender).transfer(amount_ - fee_); //Send back the user's AVAX deposited minus the fee
+    }
 
 
     //Internal functions:
@@ -389,8 +406,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
             airdropIndex++; // In case of any reentrancy type issues, we increment the global index before sending out tokens
             buyer_ = presaleBuyers[localIndex_];
             amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Calculate amount_ here, instead of with the time checked presaleTokensPurchased(), to save gas
-            _transfer(address(this), buyer_, amount_); //Send tokens from the contract itself to the presale buyers
-            
+            if (amount_ > 0) { //If someone exited the presale early, then they will have 0 tokens to receive in airdrop
+                _transfer(address(this), buyer_, amount_); //Send tokens from the contract itself to the presale buyers
+            }
         }
 
         if (airdropIndex == presaleBuyers.length) {
@@ -491,7 +509,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
 /*
    Launch instructions:
 1. Set the constant values at the start of the contract and the token name and symbol.
-2. Deploy contract with solidity version: 0.8.24, and runs optimized: 200.
+2. Deploy contract with solidity version: 0.8.28 and runs optimized: 200.
 3. Verify contract and set socials on block explorer and dexscreener.
 4. Bug bounty could be good to set up on https://www.sherlock.xyz/ or https://code4rena.com/ or similar.
 5. After presale ends, call seedLP() in presale contract to create LP.
