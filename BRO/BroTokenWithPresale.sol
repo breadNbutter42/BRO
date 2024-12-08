@@ -251,6 +251,11 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         _airdrop(maxTransfers_);
     }
 
+    
+    function buyPresale() public payable { //Public function alternative to fallback function to buy presale tokens
+        _buyPresale(msg.value, msg.sender); //Simple interface, no need to specify buyer address since it's the msg.sender
+    }
+
 
     //This is so users can exit the presale before presale is over. We will still have them in the array of addresses to airdrop but we will reset their totalPurchasedWithWhitelist to 0
     //To prevent abuse of this function we will charge a 10% withdrawal fee of the avax deposited to the contract, so that during the airdrop we don't have to process a bunch of empty slots
@@ -321,7 +326,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     }
 
 
-    function _buyPresale(uint256 amount_, address buyer_) private {
+    function _buyPresale(uint256 amount_, address buyer_) private nonReentrant{
         require(block.timestamp < PRESALE_END_TIME, "Presale has already ended");
         require(amount_ >= MINIMUM_BUY_WEI, "Minimum buy of 1 AVAX per transaction; Not enough AVAX sent");
         
@@ -364,7 +369,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     //Fallback functions:
     //The user's wallet will add extra gas when transferring AVAX to the fallback functions, so we are not restricted to only sending an event here.
 
-    receive() external payable nonReentrant { //This function is used to receive AVAX from users for the presale
+    receive() external payable { //This function is used to receive AVAX from users for the presale
         _buyPresale(msg.value, msg.sender); 
     }
 
