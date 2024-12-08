@@ -1,3 +1,12 @@
+/* $BRO Links:
+Medium: https://medium.com/@BROFireAvax
+Twitter: @BROFireAvax
+Discord: https://discord.gg/uczFJdMaf4
+Telegram: BROFireAvax
+Website: www.BROFireAvax.com
+Email: contact@BROFireAvax.com
+*/
+
 // This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
 // Users can transfer AVAX directly to this contract address during the presale time window.
 // There is a minimum presale buy in amount of 1 AVAX per transfer.
@@ -7,7 +16,7 @@
 
 // LP is burned since fees are automatically converted to more LP
 
-// Base token contract imports created with https://wizard.openzeppelin.com/ using their ERC20 with Permit and Ownable.
+// Base token contract imports created with https://wizard.openzeppelin.com/ using their ERC20 with Permit.
 
 
 interface IUniswapV2Factory { 
@@ -49,23 +58,6 @@ interface ITJUniswapV2Router01 {  //TraderJoe version of Uniswap code which has 
 
 
 
-interface IERC20Token { //Generic ability to transfer out funds accidentally sent into the contract
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function approve(address spender, uint256 amount) external returns (bool);
-}
-
-
-
-interface IERC721Token { //Generic ability to transfer out NFTs accidentally sent into the contract
-    function transferFrom(address from, address to, uint256 tokenId) external; 
-    function safeTransferFrom(address from, address to, uint256 tokenId) external;
-    function safeTransfer(address from, address to, uint256 tokenId) external;
-    function transfer(address from, address to, uint256 tokenId) external;
-}
-
-
-
 /*
 ⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⣼⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣧⠀⠀⠀⠀⠀⠀
@@ -103,11 +95,10 @@ pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
-contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
+contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     uint256 public constant SECONDS_FOR_WL = 5 minutes; //Seconds per each phase, for example 5 minutes is 300 seconds
     uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //88,888,888 BRO in wei
@@ -196,7 +187,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     constructor()
     ERC20("Test", "TST")
     ERC20Permit("Test")
-    Ownable(msg.sender)
     { //This ERC20 constructor creates our BRO token name and symbol. 
 
         require(IDO_START_TIME > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
@@ -261,13 +251,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     }
 
 
-    function buyPresale() public payable { //Public function alternative to fallback function to buy presale tokens
+    function buyPresale() public payable nonReentrant { //Public function alternative to fallback function to buy presale tokens
         _buyPresale(msg.value, msg.sender); //Simple interface, no need to specify buyer address since it's the msg.sender
-    }
-
-
-    function buyPresale(address buyer_) public payable { //Public function alternative to fallback function to buy presale tokens
-        _buyPresale(msg.value, buyer_); //Can specify buyer address in case it's useful, such as a middleman rewards contract
     }
 
 
@@ -312,6 +297,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         _airdrop(maxTransfers_);
     }
 
+
     //This is so users can exit the presale before presale is over. We will still have them in the array of addresses to airdrop but we will reset their totalPurchasedWithWhitelist to 0
     //To prevent abuse of this function we will charge a 10% withdrawal fee of the avax deposited to the contract, so that during the airdrop we don't have to process a bunch of empty slots
     function emergencyWithdrawWithFee() external nonReentrant { 
@@ -319,7 +305,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
             require(!lpSeeded, "LP has already been seeded with users funds; Cannot emergency withdraw AVAX after LP is seeded");
             require(block.timestamp >= PRESALE_END_TIME + 24 hours, "Cannot emergency withdraw AVAX after presale ends, until 24 hours afterwards, to give time to seed LP first"); 
         }
-
         uint256 amount_ = totalAvaxUserSent[msg.sender];
         require(amount_ > 0, "No AVAX to withdraw");
         totalAvaxUserSent[msg.sender] = 0; //Reset user's total AVAX sent to 0
@@ -423,62 +408,15 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     //Fallback functions:
     //The user's wallet will add extra gas when transferring AVAX to the fallback functions, so we are not restricted to only sending an event here.
 
-    fallback() external payable {  //This function is used to receive AVAX from users for the presale
+    fallback() external payable nonReentrant {  //This function is used to receive AVAX from users for the presale
         _buyPresale(msg.value, msg.sender); 
     }
 
 
-    receive() external payable { //This function is used to receive AVAX from users for the presale
+    receive() external payable nonReentrant { //This function is used to receive AVAX from users for the presale
         _buyPresale(msg.value, msg.sender); 
     }
 
-
-
-    //Owner emergency withdraw functions:
-
-    function withdrawAvaxTo(address payable to_, uint256 amount_) external onlyOwner afterAirdrop {
-        require(to_ != address(0), "Cannot withdraw to 0 address");
-        to_.transfer(amount_); //Can only send Avax from our contract, any user's wallet is safe
-        emit AvaxWithdraw(to_, amount_);
-    }
-
-    function iERC20TransferFrom(address contract_, address to_, uint256 amount_) external onlyOwner afterAirdrop {
-        (bool success) = IERC20Token(contract_).transferFrom(address(this), to_, amount_); //Can only transfer from our own contract
-        require(success, 'token transfer from sender failed');
-        emit TokenWithdraw(to_, amount_, contract_);
-    }
-
-    function iERC20Transfer(address contract_, address to_, uint256 amount_) external onlyOwner afterAirdrop {
-        (bool success) = IERC20Token(contract_).transfer(to_, amount_); 
-        //Since interfaced contract looks at msg.sender then this can only send from our own contract
-        require(success, 'token transfer from sender failed');
-        emit TokenWithdraw(to_, amount_, contract_);
-    }
-
-    function iERC20Approve(address contract_, address spender_, uint256 amount_) external onlyOwner afterAirdrop {
-        IERC20Token(contract_).approve(spender_, amount_); //Since interfaced contract looks at msg.sender then this can only send from our own contract
-        emit TokenApproved(spender_, amount_, contract_);
-    }
-
-    function iERC721TransferFrom(address contract_, address to_, uint256 tokenId_) external onlyOwner afterAirdrop {
-        IERC721Token(contract_).transferFrom(address(this), to_, tokenId_); //Can only transfer from our own contract
-        emit NFTWithdraw(to_, tokenId_, contract_);
-    }
-
-    function iERC721SafeTransferFrom(address contract_, address to_, uint256 tokenId_) external onlyOwner afterAirdrop {
-        IERC721Token(contract_).safeTransferFrom(address(this), to_, tokenId_); //Can only transfer from our own contract
-        emit NFTWithdraw(to_, tokenId_, contract_);
-    }
-
-    function iERC721Transfer(address contract_, address to_, uint256 tokenId_) external onlyOwner afterAirdrop {
-        IERC721Token(contract_).transfer( address(this), to_, tokenId_); //Can only transfer from our own contract
-        emit NFTWithdraw(to_, tokenId_, contract_);
-    }
-
-    function iERC721SafeTransfer(address contract_, address to_, uint256 tokenId_) external onlyOwner afterAirdrop {
-        IERC721Token(contract_).safeTransfer( address(this), to_, tokenId_); //Can only transfer from our own contract
-        emit NFTWithdraw(to_, tokenId_, contract_);
-    }
 
 }
 
@@ -510,9 +448,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
    Launch instructions:
 1. Set the constant values at the start of the contract and the token name and symbol.
 2. Deploy contract with solidity version: 0.8.28 and runs optimized: 200.
-3. Verify contract and set socials on block explorer and dexscreener.
+3. Verify contract and set socials on block explorer and Dexscreener.
 4. Bug bounty could be good to set up on https://www.sherlock.xyz/ or https://code4rena.com/ or similar.
 5. After presale ends, call seedLP() in presale contract to create LP.
 6. After LP is seeded call airdropBuyers() repeatedly in the presale contract to send out all the airdrop tokens to presale buyers.
-7. Can renounce ownership after IDO is complete in case of emergency, or keep ownership for emergency withdraws or transfer to a DAO, but owner has no real powers to worry about.
 */
