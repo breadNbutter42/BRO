@@ -251,7 +251,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         _airdrop(maxTransfers_);
     }
 
-    
+    //*Note: NONREENTRANT is called in the internal __buyPresale
     function buyPresale() public payable { //Public function alternative to fallback function to buy presale tokens
         _buyPresale(msg.value, msg.sender); //Simple interface, no need to specify buyer address since it's the msg.sender
     }
