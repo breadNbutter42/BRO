@@ -1,3 +1,12 @@
+/* $BRO Links:
+Medium: https://medium.com/@BROFireAvax
+Twitter: @BROFireAvax
+Discord: https://discord.gg/uczFJdMaf4
+Telegram: BROFireAvax
+Website: www.BROFireAvax.com
+Email: contact@BROFireAvax.com
+*/
+
 // This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
 // Users can transfer AVAX directly to this contract address during the presale time window.
 // There is a minimum presale buy in amount of 1 AVAX per transfer.
@@ -239,11 +248,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         else { //If trading is active and not restricted then it's the public phase
             return 4; //4 == Public trading
         }
-    }
-
-
-    function buyPresale() public payable nonReentrant { //Public function alternative to fallback function to buy presale tokens
-        _buyPresale(msg.value, msg.sender); //Simple interface, no need to specify buyer address since it's the msg.sender
     }
 
 
