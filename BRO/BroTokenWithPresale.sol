@@ -147,25 +147,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         address indexed to, 
         uint256 amount
     );
-
-    event TokenWithdraw(
-        address indexed to, 
-        uint256 amount,
-        address indexed token
-    );
-
-    event TokenApproved(
-        address indexed spender, 
-        uint256 amount,
-        address indexed token
-    );
-
-    event NFTWithdraw(
-        address indexed to, 
-        uint256 ID,
-        address indexed token
-    );
-    
+   
 
 
     //Change name and symbol to Bro, BRO for actual deployment
@@ -284,6 +266,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         uint256 fee_ = (amount_ * 10) / 100; //10% fee on withdrawls to prevent spamming the contract with empty airdrop slots
         payable(FEE_WALLET).transfer(fee_); //Send the fee to the fee collector wallet
         payable(msg.sender).transfer(amount_ - fee_); //Send back the user's AVAX deposited minus the fee
+        emit AvaxWithdraw(msg.sender, amount_ - fee_);
     }
 
 
