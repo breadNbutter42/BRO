@@ -282,15 +282,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     }
 
 
-    function airdropBuyers() external { //2. Call as many times as needed to airdrop all presale buyers
-        require(lpSeeded, "LP must be seeded before airdrop can start");
-        require(!airdropCompleted, "Airdrop has already been completed");
-        require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
-        _airdrop(100); //100 max transfers per tx
-    }
-
-
-    function airdropBuyers(uint256 maxTransfers_) external { //Alternative airdrop function where users can set max transfers per tx
+    function airdropBuyers(uint256 maxTransfers_) external nonReentrant { //Airdrop function where users can set max transfers per tx
         require(lpSeeded, "LP must be seeded before airdrop can start");
         require(!airdropCompleted, "Airdrop has already been completed");
         require(block.timestamp >= AIRDROP_TIME, "It is not yet time to airdrop the presale buyer's tokens");
