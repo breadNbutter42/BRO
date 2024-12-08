@@ -1,12 +1,3 @@
-/* $BRO Links:
-Medium: https://medium.com/@BROFireAvax
-Twitter: @BROFireAvax
-Discord: https://discord.gg/uczFJdMaf4
-Telegram: BROFireAvax
-Website: www.BROFireAvax.com
-Email: contact@BROFireAvax.com
-*/
-
 // This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
 // Users can transfer AVAX directly to this contract address during the presale time window.
 // There is a minimum presale buy in amount of 1 AVAX per transfer.
@@ -307,6 +298,13 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     }
 
 
+    function presaleTokensPurchased(address buyer_) public view returns (uint256) { //Calculate amount of Bro tokens to send to buyer as ratio of AVAX sent
+        require(block.timestamp > PRESALE_END_TIME, "Presale has not yet ended"); //Cannot calculate ratios until all AVAX is collected in presale
+        return (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei;
+    }
+
+
+
     //Internal functions:
 
     function _update( //Phases check
@@ -348,12 +346,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
             uint256 amountPresaleTokensPurchased_ = presaleTokensPurchased(to_);
             require(totalPurchasedWithWhitelist[to_] <= amountPresaleTokensPurchased_, "During whitelist phase, you cannot receive more tokens than purchased in the presale");
         }
-    }
-
-
-    function presaleTokensPurchased(address buyer_) public view returns (uint256) { //Calculate amount of Bro tokens to send to buyer as ratio of AVAX sent
-        require(block.timestamp > PRESALE_END_TIME, "Presale has not yet ended"); //Cannot calculate ratios until all AVAX is collected in presale
-        return (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei;
     }
 
 
@@ -399,11 +391,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     //Fallback functions:
     //The user's wallet will add extra gas when transferring AVAX to the fallback functions, so we are not restricted to only sending an event here.
-
-    fallback() external payable nonReentrant {  //This function is used to receive AVAX from users for the presale
-        _buyPresale(msg.value, msg.sender); 
-    }
-
 
     receive() external payable nonReentrant { //This function is used to receive AVAX from users for the presale
         _buyPresale(msg.value, msg.sender); 
