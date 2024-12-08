@@ -319,12 +319,12 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
             return;
         }
         
-        beforeTokenTransfer(to_, amount_, tradingPhase_); //Check if user is allowed to receive tokens in whitelist phase 3
+        _beforeTokenTransfer(to_, amount_, tradingPhase_); //Check if user is allowed to receive tokens in whitelist phase 3
         super._update(from_, to_, amount_); //Send the token transfer requested by user
     }
 
 
-    function beforeTokenTransfer(
+    function _beforeTokenTransfer(
         address to_,
         uint256 amountTokensToTransfer_,
         uint256 tradingPhase_
