@@ -92,7 +92,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     uint256 public constant SECONDS_FOR_WL = 5 minutes; //Seconds per each phase, for example 5 minutes is 300 seconds
-    uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //88,888,888 BRO in wei
+    uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //BRO supply in wei
     uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; // 50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
     uint256 public constant IDO_START_TIME = 1738666068; //Whitelist phase start time in unix timestamp
@@ -165,13 +165,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         uint256 ID,
         address indexed token
     );
-
     
-    modifier afterAirdrop() {
-        require(block.timestamp >= AIRDROP_TIME + 24 hours, "Cannot emergency withdraw tokens until 24 hours after airdrop starts"); 
-        //Wait to give time for presale token dispersal to complete first
-        _;
-    }
 
 
     //Change name and symbol to Bro, BRO for actual deployment
