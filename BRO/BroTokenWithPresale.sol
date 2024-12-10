@@ -331,7 +331,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         require(block.timestamp < PRESALE_END_TIME, "Presale has already ended");
         require(amount_ >= MINIMUM_BUY_WEI, "Minimum buy of 1 AVAX per transaction; Not enough AVAX sent");
         
-        if (previousBuyer[buyer_] == false) { //Add buyer to the presaleBuyers array if they are a first time buyer
+        if (!previousBuyer[buyer_]) { //Add buyer to the presaleBuyers array if they are a first time buyer
             previousBuyer[buyer_] = true;
             presaleBuyers.push(buyer_);
             emit BuyerAdded(buyer_);
