@@ -95,7 +95,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     uint256 public constant TOTAL_SUPPLY_WEI = 420690000000000; //BRO supply 420.69T in wei
     uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; //50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
-    uint256 public constant IDO_START_TIME = 1738666068; //Whitelist phase start time in unix timestamp
+    uint256 public constant IDO_START_TIME = 1734254100; //Whitelist phase start time in unix timestamp : Sun Dec 15 2024 04:15:00 AM GMT-0500 (Eastern Standard Time)
     uint256 public constant PRESALE_END_TIME = IDO_START_TIME - 120 minutes; //LP seeding start time in unix timestamp, must be before IDO_START_TIME
     uint256 public constant AIRDROP_TIME = IDO_START_TIME - 119 minutes; //Date presale tokens dispersal starts, leave a buffer since miners can vary timestamp slightly
     uint256 public constant MINIMUM_BUY_WEI = 1000000000000000000; //1 AVAX in wei minimum buy, to prevent micro buy spam attack hurting the airdrop phase
@@ -121,9 +121,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     uint256 public airdropIndex = 0; //Count through the airdrop array when sending out tokens
     uint256 public totalAvaxPresaleWei = 0; //Count total AVAX received during presale
 
-    mapping (address => bool) public previousBuyer; //Mapping to store if user is a new presale buyer
+    mapping (address => bool) public previousBuyer; //Mapping to store if user is a previous presale buyer
     mapping (address => uint256) public totalAvaxUserSent; //Mapping to store total AVAX sent by each presale buyer
-    mapping (address => uint256) public totalPurchasedWithWhitelist; //Track total purchased by user during gated phases
+    mapping (address => uint256) public totalPurchasedWithWhitelist; //Track total purchased by user during whitelist phase
 
     
     event AirdropSent(
@@ -153,8 +153,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     //Change name and symbol to Bro, BRO for actual deployment
     constructor()
-    ERC20("Test", "TST")
-    ERC20Permit("Test")
+    ERC20("My Bro", "BRO")
+    ERC20Permit("My Bro")
     { //This ERC20 constructor creates our BRO token name and symbol. 
 
         require(IDO_START_TIME > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
@@ -178,7 +178,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     //Public functions:
 
-    function tradingActive() public view returns (bool) { //Check if IDO_START_TIME happened yet to open trading in general
+    function tradingActive() public view returns (bool) { //Check if IDO_START_TIME happened yet to open trading
         if (lpSeeded) {
             return block.timestamp >= IDO_START_TIME; //Return true if IDO has started
         } else {
@@ -248,13 +248,13 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         _airdrop(maxTransfers_);
     }
 
-    //*Note: NONREENTRANT is called in the internal _buyPresale
+    //Note that nonReentrant is called in the internal _buyPresale
     function buyPresale() public payable { //Public function alternative to fallback function to buy presale tokens
         _buyPresale(msg.value, msg.sender); //Simple interface, no need to specify buyer address since it's the msg.sender
     }
 
 
-    //This is so users can exit the presale before presale is over. We will still have them in the array of addresses to airdrop but we will reset their totalPurchasedWithWhitelist to 0
+    //This is so users can exit the presale before the presale is over. We will still have them in the array of addresses to airdrop but we will reset their totalAvaxUserSent to 0
     //To prevent abuse of this function we will charge a 10% withdrawal fee of the avax deposited to the contract, so that during the airdrop we don't have to process a bunch of empty slots
     function emergencyWithdrawWithFee() external nonReentrant { 
         if (block.timestamp > PRESALE_END_TIME) { //If presale is over, make sure to give time to make LP, before allowing emergency withdrawal
@@ -265,7 +265,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         require(amount_ > 0, "No AVAX to withdraw");
         totalAvaxUserSent[msg.sender] = 0; //Reset user's total AVAX sent to 0
         totalAvaxPresaleWei-= amount_; //Subtract the user's AVAX from the total AVAX sent during presale
-        uint256 fee_ = (amount_ * 10) / 100; //10% fee on withdrawls to prevent spamming the contract with empty airdrop slots
+        uint256 fee_ = (amount_ * 10) / 100; //10% fee on withdrawals to prevent spamming the contract with empty airdrop slots
         payable(FEE_WALLET).transfer(fee_); //Send the fee to the fee collector wallet
         payable(msg.sender).transfer(amount_ - fee_); //Send back the user's AVAX deposited minus the fee
         emit AvaxWithdraw(msg.sender, amount_ - fee_);
