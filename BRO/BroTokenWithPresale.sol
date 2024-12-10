@@ -215,7 +215,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     }
 
 
-    function seedLP() public nonReentrant { //1. This function must be called once, after the presale ends
+    function seedLP() public nonReentrant { //This function must be called once, after the presale ends
         require (block.timestamp >= PRESALE_END_TIME + 1 minutes, "Presale time plus buffer has not yet ended"); //Add a one minute buffer in case of miner timestamp variance
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
