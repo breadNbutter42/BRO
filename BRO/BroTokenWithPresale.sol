@@ -159,10 +159,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
         require(IDO_START_TIME > block.timestamp + 3 hours, "IDO start time must be at least 3 hours in the future");
         require(IDO_START_TIME < block.timestamp + 91 days, "IDO start time cannot be more than 91 days from now");
-        require(PRESALE_END_TIME < IDO_START_TIME, "Presale end time must be before IDO start time");
-        require(AIRDROP_TIME > PRESALE_END_TIME, "Airdrop time must be after presale end time");
-        require(AIRDROP_TIME <= (PRESALE_END_TIME + 1 days), "Airdrop time must be within 1 day after presale end time");
-
 
         ITJUniswapV2Router01 lfjV1Router_;
         address lfjV1PairAddress_;
