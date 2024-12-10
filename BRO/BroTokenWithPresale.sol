@@ -121,6 +121,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     uint256 public airdropIndex = 0; //Count through the airdrop array when sending out tokens
     uint256 public totalAvaxPresaleWei = 0; //Count total AVAX received during presale
 
+    mapping (address => bool) public previousBuyer; //Mapping to store if user is a new presale buyer
     mapping (address => uint256) public totalAvaxUserSent; //Mapping to store total AVAX sent by each presale buyer
     mapping (address => uint256) public totalPurchasedWithWhitelist; //Track total purchased by user during gated phases
 
@@ -330,13 +331,14 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         require(block.timestamp < PRESALE_END_TIME, "Presale has already ended");
         require(amount_ >= MINIMUM_BUY_WEI, "Minimum buy of 1 AVAX per transaction; Not enough AVAX sent");
         
-        if (totalAvaxUserSent[buyer_] == 0) { //Add buyer to the presaleBuyers array if they are a first time buyer
+        if (previousBuyer[buyer_] == false) { //Add buyer to the presaleBuyers array if they are a first time buyer
+            previousBuyer[buyer_] = true;
             presaleBuyers.push(buyer_);
             emit BuyerAdded(buyer_);
         }
 
-        totalAvaxUserSent[buyer_]+= amount_;
-        totalAvaxPresaleWei+= amount_;
+        totalAvaxUserSent[buyer_] += amount_;
+        totalAvaxPresaleWei += amount_;
         emit PresaleBought(amount_, buyer_);
     }
 
