@@ -92,8 +92,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     uint256 public constant SECONDS_FOR_WL = 5 minutes; //Seconds per each phase, for example 5 minutes is 300 seconds
-    uint256 public constant TOTAL_SUPPLY_WEI = 100000000000000000000000000; //BRO supply in wei
-    uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; // 50% of BRO supply is for the presale buyers
+    uint256 public constant TOTAL_SUPPLY_WEI = 420690000000000; //BRO supply 420.69T in wei
+    uint256 public constant PRESALERS_BRO_SUPPLY_WEI = (TOTAL_SUPPLY_WEI * 50) / 100; //50% of BRO supply is for the presale buyers
     uint256 public constant LP_BRO_SUPPLY_WEI = TOTAL_SUPPLY_WEI - PRESALERS_BRO_SUPPLY_WEI; //Remaining BRO is for automated LP
     uint256 public constant IDO_START_TIME = 1738666068; //Whitelist phase start time in unix timestamp
     uint256 public constant PRESALE_END_TIME = IDO_START_TIME - 120 minutes; //LP seeding start time in unix timestamp, must be before IDO_START_TIME
@@ -219,7 +219,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         require (block.timestamp >= PRESALE_END_TIME + 1 minutes, "Presale time plus buffer has not yet ended"); //Add a one minute buffer in case of miner timestamp variance
         require(!lpSeeded, "LFJ V1 LP has already been seeded");
         
-        // Approve BRO tokens for transfer by the router
+        //Approve BRO tokens for transfer by the router
         _approve(address(this), ROUTER_ADDRESS, LP_BRO_SUPPLY_WEI); //Approve main router to use our DRAGON tokens and make LP
 
 
@@ -347,7 +347,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
         while (airdropIndex < presaleBuyers.length && airdropIndex < limitCount_) {
             localIndex_ = airdropIndex;
-            airdropIndex++; // In case of any reentrancy type issues, we increment the global index before sending out tokens
+            airdropIndex++; //In case of any re-entrancy type issues, we increment the global index before sending out tokens
             buyer_ = presaleBuyers[localIndex_];
             amount_ = (totalAvaxUserSent[buyer_] * PRESALERS_BRO_SUPPLY_WEI) / totalAvaxPresaleWei; //Calculate amount_ here, instead of with the time checked presaleTokensPurchased(), to save gas
             if (amount_ > 0) { //If someone exited the presale early, then they will have 0 tokens to receive in airdrop
