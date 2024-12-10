@@ -102,7 +102,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     uint256 public constant TOTAL_PHASES = 4; 
     //Total phases for IDO, phase 0 is the presale, phase 1 is LP seeding, phase 2 is presale token dispersal, phase 3 is the whitelist IDO launch, phase 4 is public trading
 
-    address public constant FEE_WALLET = 0xb886B99ee96Ade23A803E310F33DE94FE0145689; //Wallet to receive fees from any emergency withdrawals
+    address public constant FEE_WALLET = 0xb886B99ee96Ade23A803E310F33DE94FE0145689; //Multisig Gnosis wallet to receive fees from any emergency withdrawals
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD; //Burn LP by sending it to this address 
     address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
     //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7 ; Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
