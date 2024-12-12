@@ -92,8 +92,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
-    uint256 public constant TRILLIONS_SUPPLY = 420690000000000000000000000000000; 
-    //420.69 Trillion in 18 decimal precision
+    uint256 public constant TRILLIONS_SUPPLY = 420690 * 10**9 * 10**18; //420690000000000000000000000000000
+    //420.69 Trillion in 18 decimal precision, 420,690,000,000,000 . 000,000,000,000,000,000
 
     uint256 public constant TOTAL_SUPPLY_TO_MINT = TRILLIONS_SUPPLY; 
     //BRO token total supply amount to mint to this contract in constructor
@@ -148,17 +148,16 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     //Burn LP by sending it to this address
 
     address public constant WAVAX_ADDRESS = 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7; 
-    //WAVAX Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
-    //Fuji: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
+    //WAVAX C-Chain Mainnet: 0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7
+    //WAVAX Fuji Testnet: 0xd00ae08403B9bbb9124bB305C09058E32C39A48c
 
     address public constant ROUTER_ADDRESS = 0x60aE616a2155Ee3d9A68541Ba4544862310933d4; 
     //Main BRO/AVAX LP dex router
-    //TraderJoe router = C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4
-    //Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
+    //TraderJoe router C-Chain Mainnet: 0x60aE616a2155Ee3d9A68541Ba4544862310933d4
+    //TraderJoe router Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
+    
 
     address public immutable LFJ_V1_PAIR_ADDRESS  = address(0); //Swap with pair BRO/WAVAX
-
-    address public immutable DEPLOYER_ADDRESS = address(0); //Contract deployer to receive dust
 
 
     ITJUniswapV2Router01 public lfjV1Router; 
@@ -174,7 +173,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     uint256 public totalAvaxPresale = 0; //Count total AVAX in WEI received during presale
 
     mapping (address => bool) public previousBuyer; //True if user is a previous presale buyer
-    mapping (address => uint256) public airdropSlot; //Aairdrop array slot of the presale buyer
+    mapping (address => uint256) public airdropSlot; //Airdrop array slot of the presale buyer
     mapping (address => uint256) public totalAvaxUserSent; //Total AVAX in WEI sent by presale buyers
     mapping (address => bool) public userHasClaimed; //True if user has claimed their tokens already
     mapping (address => uint256) public userTokensFromWL; //BRO tokens received per user during WL
@@ -209,16 +208,10 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         uint256 amount
     );
 
-    event DustRemoved(
-        address indexed receiver, 
+    event DustBurned(
         uint256 amount
     );
    
-
-   modifier noContracts() { //Prevent malicious contracts from interacting with our contract
-        require(tx.origin == msg.sender, "Other contracts are not allowed to write to our contract");
-        _;
-    }
 
     modifier afterPresale() { //Check if presale has ended plus buffer time
         require(block.timestamp >= PREP_TIME, "Presale time plus buffer has not yet ended"); 
@@ -245,9 +238,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         require(IDO_START_TIME > block.timestamp + 3 hours, "IDO_START_TIME must be > 3 hours from now");
         require(IDO_START_TIME < block.timestamp + 7 days, "IDO_START_TIME must be < 7 days from now");
 
-        require(tx.origin == msg.sender, "Contract deployer must be EOA"); //EOA wallet to receive dust
-        DEPLOYER_ADDRESS = msg.sender; //Set the DEPLOYER_ADDRESS to the contract creator
-
         ITJUniswapV2Router01 lfjV1Router_;
         address lfjV1PairAddress_;
         
@@ -267,13 +257,13 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     //Public functions:
 
-    //Check if LP is seeded and IDO_START_TIME happened yet to open trading
+    //To open trading, check if LP is seeded, and if IDO_START_TIME has started yet
     function tradingActive() public view returns (bool) { 
         return(lpSeeded && block.timestamp >= IDO_START_TIME); //Return true if IDO has already started
     }
 
 
-    //Check if we are in restricted whitelist phase
+    //Check if we are in the restricted whitelist phase
     function tradingRestricted() public view returns (bool) { 
         return tradingActive() && block.timestamp <= (WL_END_TIME); 
         //True if tradingActive and whitelisted phase is not yet over
@@ -312,7 +302,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     //This function must be called once, after the presale ends
-    function seedLP() public nonReentrant noContracts afterPresale notSeeded {
+    function seedLP() public nonReentrant afterPresale notSeeded {
         
         //Approve BRO tokens for transfer by the router
         _approve(address(this), ROUTER_ADDRESS, LP_BRO_SUPPLY);
@@ -336,47 +326,49 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     //Note that nonReentrant is called in the internal _buyPresale
-    //Public function alternative to fallback function to buy presale tokens
-    function buyPresale() public payable noContracts { 
+    //Public function alternative to the receive() function, to buy presale tokens
+    function buyPresale() public payable { 
         _buyPresale(msg.value, msg.sender);
     }
 
 
     //This is so users can exit the presale before the presale is over. 
     //We will remove them from the airdrop array and reset their total deposited to 0
-    function emergencyWithdraw() external nonReentrant noContracts notSeeded {
-        uint256 amount_ = totalAvaxUserSent[msg.sender];
+    function emergencyWithdraw() external nonReentrant notSeeded {
+        address buyer_ = msg.sender;
+        uint256 amount_ = totalAvaxUserSent[buyer_];
         require(amount_ > 0, "No AVAX to withdraw");
-        totalAvaxUserSent[msg.sender] = 0; //Reset user's total AVAX deposited to 0
+        totalAvaxUserSent[buyer_] = 0; //Reset user's total AVAX deposited to 0
         totalAvaxPresale-= amount_; //Subtract user's AVAX from total AVAX received by all users
-        _popAndSwapAirdrop(msg.sender); //Remove user from presaleBuyers array
-        payable(msg.sender).transfer(amount_); //Send back the user's AVAX deposited
-        previousBuyer[msg.sender] = false; //Set user status to not being a previous buyer anymore
-        emit AvaxWithdraw(msg.sender, amount_);
+        _popAndSwapAirdrop(buyer_); //Remove user from presaleBuyers airdrop array
+        payable(buyer_).transfer(amount_); //Send back the user's AVAX deposited
+        previousBuyer[buyer_] = false; //Set user status to not being a previous buyer anymore
+        emit AvaxWithdraw(buyer_, amount_);
     }
 
 
     //Due to the nature of the decimal division in the airdrop and claim calculations, 
-    //we may have some tiny amount of token dust leftover in the contract, which can be removed here
-    function removeDust() external nonReentrant noContracts {
+    //we may have some tiny amount of token dust leftover in the contract, which can be burned here
+    function burnDust() external nonReentrant {
         require(airdropCompleted, "Airdrop has not yet been completed");
         uint256 dust_ = balanceOf(address(this));
         require(dust_ > 0, "No dust to remove");
-        _transfer(address(this), DEPLOYER_ADDRESS, dust_);
-        emit DustRemoved(DEPLOYER_ADDRESS, dust_);
+        _transfer(address(this), DEAD_ADDRESS, dust_);
+        emit DustBurned(dust_);
     }
 
 
     //Airdrop function where users can set max transfers per tx
-    function airdropBuyers(uint256 maxTransfers_) external nonReentrant noContracts afterPresale seeded { 
+    function airdropBuyers(uint256 maxTransfers_) external nonReentrant afterPresale seeded { 
         require(!airdropCompleted, "Airdrop has already been completed");
         _airdrop(maxTransfers_);
     }
 
 
-    //Claim tokens individually (pull method), instead of receive them in the airdrop (push method)
-    function claimTokens(address buyer_) external nonReentrant noContracts afterPresale seeded {
-        uint256 amount_ = presaleTokensPurchased(msg.sender);
+    //Claim tokens to a single user (pull method), instead of receiving in the multisend airdrop (push method)
+    //We will allow anyone to send a single user their tokens due to them, if they haven't received them yet
+    function claimTokens(address buyer_) external nonReentrant afterPresale seeded {
+        uint256 amount_ = presaleTokensPurchased(buyer_);
         require(amount_ > 0, "No tokens to claim");
         require(!userHasClaimed[buyer_], "User has already received their BRO tokens");
         userHasClaimed[buyer_] = true;
@@ -385,7 +377,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         emit TokensClaimed(buyer_, amount_);
         if (airdropIndex >= presaleBuyers.length) {
             airdropCompleted = true;
-            emit AirdropCompleted(msg.sender);
+            emit AirdropCompleted(buyer_);
         }
     }
     
@@ -393,8 +385,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     //Internal functions:
 
-    function _popAndSwapAirdrop(address user_) private { //Remove user from presaleBuyers array
-        uint256 slot_ = airdropSlot[user_]; //Get slot of user to remove from airdrop array presaleBuyers
+    function _popAndSwapAirdrop(address removedUser_) private { //Remove user from presaleBuyers array
+        uint256 slot_ = airdropSlot[removedUser_]; //Get slot of user to remove from airdrop array presaleBuyers
         uint256 lastIndex_ = presaleBuyers.length - 1; //Get the last index of the array
         if (slot_ == lastIndex_) { //If the user to remove is the last user in the array
             presaleBuyers.pop(); //Remove the user from the array
@@ -402,8 +394,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         }
         address lastUser_ = presaleBuyers[lastIndex_]; //Get the last user in the array
         presaleBuyers.pop(); //Remove the duplicated last user from the array
-        presaleBuyers[slot_] = lastUser_; //Swap the last user in the array with the user to remove
-        airdropSlot[lastUser_] = slot_; //Update the slot of the last user in the array
+        presaleBuyers[slot_] = lastUser_; //Swap the duplicated user in the array with the user to remove
+        airdropSlot[lastUser_] = slot_; //Update the slot mapping of the duplicated user
     }
 
 
@@ -498,10 +490,11 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     
 
 
-    //Fallback functions:
+    //Fallback and/or receive public functions:
 
     //The user's wallet will add extra gas when transferring AVAX; We aren't restricted to only sending an event.
-    receive() external payable noContracts { //This function is used to receive AVAX from users for the presale
+    //Note that nonReentrant is called in the internal _buyPresale
+    receive() external payable { //This function is used to receive AVAX from users for the presale
         _buyPresale(msg.value, msg.sender); 
     }
 
