@@ -92,51 +92,51 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol"; //OpenZeppelin Contr
 
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
-    uint256 public constant TRILLIONS_SUPPLY = 420690 * 10**9 * 10**18; //420690000000000000000000000000000
+    uint256 private constant _TRILLIONS_SUPPLY = 420690 * 10**9 * 10**18; //420690000000000000000000000000000
     //420.69 Trillion in 18 decimal precision, 420,690,000,000,000 . 000,000,000,000,000,000
 
-    uint256 public constant TOTAL_SUPPLY_TO_MINT = TRILLIONS_SUPPLY; 
+    uint256 private constant _TOTAL_SUPPLY_TO_MINT = _TRILLIONS_SUPPLY; 
     //BRO token total supply amount to mint to this contract in constructor
 
-    uint256 public constant FIFTY_PERCENT = 50; //50% of BRO supply is for the presale buyers
+    uint256 private constant _FIFTY_PERCENT = 50; //50% of BRO supply is for the presale buyers
 
-    uint256 public constant PRESALERS_BRO_SUPPLY = (TOTAL_SUPPLY_TO_MINT * FIFTY_PERCENT) / 100; 
-    //50% of BRO supply calculated as (TOTAL_SUPPLY_TO_MINT * 50) / 100
+    uint256 public constant PRESALERS_BRO_SUPPLY = (_TOTAL_SUPPLY_TO_MINT * _FIFTY_PERCENT) / 100; 
+    //50% of BRO supply calculated as (_TOTAL_SUPPLY_TO_MINT * 50) / 100
 
-    uint256 public constant LP_BRO_SUPPLY = TOTAL_SUPPLY_TO_MINT - PRESALERS_BRO_SUPPLY; 
+    uint256 public constant LP_BRO_SUPPLY = _TOTAL_SUPPLY_TO_MINT - PRESALERS_BRO_SUPPLY; 
     //Remaining BRO is for automated LP
 
-    uint256 public constant FULL_MOON_TIME = 1734254100; 
+    uint256 private constant _FULL_MOON_TIME = 1734254100; 
     //Launch on December's full moon zenith
     //Unix timestamp of Sun Dec 15 2024 04:15:00 AM EST GMT-0500
 
-    uint256 public constant IDO_START_TIME = FULL_MOON_TIME; //Whitelist phase start time
+    uint256 public constant IDO_START_TIME = _FULL_MOON_TIME; //Whitelist phase start time
 
-    uint256 public constant HOURS_TO_PREP_IDO = 2 hours; 
+    uint256 private constant _HOURS_TO_PREP_IDO = 2 hours; 
     //2 hours before IDO_START_TIME to prepare for IDO by seeding LP,
     //and giving some time for users to collect their tokens from the presale
 
-    uint256 public constant PRESALE_END_TIME = IDO_START_TIME - HOURS_TO_PREP_IDO; 
+    uint256 public constant PRESALE_END_TIME = IDO_START_TIME - _HOURS_TO_PREP_IDO; 
     //LP seeding start time in unix timestamp, must be before IDO_START_TIME
 
-    uint256 public constant TIMESTAMP_BUFFER = 1 minutes; //Buffer for miner timestamp variance
+    uint256 private constant _TIMESTAMP_BUFFER = 1 minutes; //Buffer for miner timestamp variance
 
-    uint256 public constant PREP_TIME = PRESALE_END_TIME + TIMESTAMP_BUFFER; 
+    uint256 public constant SEEDING_TIME = PRESALE_END_TIME + _TIMESTAMP_BUFFER; 
     //Date LP seeding and presale tokens dispersal can begin, after presale ends,
     //plus a time buffer since miners can vary timestamps
 
-    uint256 public constant LENGTH_OF_WL_PHASE = 5 minutes; 
+    uint256 private constant _LENGTH_OF_WL_PHASE = 5 minutes; 
     //Length of time the whitelist phase will last, 5 minutes is 300 seconds
 
-    uint256 public constant WL_END_TIME = IDO_START_TIME + LENGTH_OF_WL_PHASE; 
+    uint256 public constant WL_END_TIME = IDO_START_TIME + _LENGTH_OF_WL_PHASE; 
     //End of whitelist phase in unix timestamp
 
-    uint256 public constant ONE_AVAX = 1000000000000000000; //1 AVAX in WEI
+    uint256 private constant _ONE_AVAX = 1000000000000000000; //1 AVAX in WEI
 
-    uint256 public constant MINIMUM_BUY = ONE_AVAX; 
+    uint256 public constant MINIMUM_BUY = _ONE_AVAX; 
     //1 AVAX in WEI minimum buy, to prevent micro buy spam attack hurting the airdrop phase
 
-    uint256 public constant TOTAL_PHASES = 4; 
+    uint256 private constant _TOTAL_PHASES = 4; 
     //Total phases for IDO
     //Phase 0 is the presale
     //Phase 1 is LP seeding
@@ -214,7 +214,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
    
 
     modifier afterPresale() { //Check if presale has ended plus buffer time
-        require(block.timestamp >= PREP_TIME, "Presale time plus buffer has not yet ended"); 
+        require(block.timestamp >= SEEDING_TIME, "Presale time plus buffer has not yet ended"); 
         //Cannot calculate token ratios until all AVAX is collected and presale ends
         _;
     }        
@@ -249,7 +249,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         lfjV1Router = lfjV1Router_; //Uses the interface created above
         LFJ_V1_PAIR_ADDRESS = lfjV1PairAddress_; //Uses the pair address created above
 
-        super._update(address(0), address(this), TOTAL_SUPPLY_TO_MINT); 
+        super._update(address(0), address(this), _TOTAL_SUPPLY_TO_MINT); 
         //Mint total supply to this contract, to later make LP and do the presale dispersal
     }
 
@@ -274,7 +274,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         uint256 timeNow_ = block.timestamp;
 
         if (!tradingActive()) {
-            if (timeNow_ < PREP_TIME) {
+            if (timeNow_ < SEEDING_TIME) {
                 return 0; //0 == Presale time plus buffer is not completed yet
             } 
             else if (!lpSeeded) {
@@ -413,7 +413,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         }
 
         uint256 tradingPhase_ = tradingPhase();
-        if (tradingPhase_ >= TOTAL_PHASES) { //Don't limit public phase 4
+        if (tradingPhase_ >= _TOTAL_PHASES) { //Don't limit public phase 4
             super._update(from_, to_, amount_);
             return;
         }
