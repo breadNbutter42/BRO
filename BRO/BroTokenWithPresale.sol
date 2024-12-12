@@ -157,7 +157,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     //TraderJoe router Fuji Testnet: 0xd7f655E3376cE2D7A2b08fF01Eb3B1023191A901
     
 
-    address public immutable LFJ_V1_PAIR_ADDRESS  = address(0); //Swap with pair BRO/WAVAX
+    address public immutable LFJ_V1_PAIR_ADDRESS; //Swap with pair BRO/WAVAX
 
 
     ITJUniswapV2Router01 public lfjV1Router; 
@@ -396,6 +396,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         presaleBuyers.pop(); //Remove the duplicated last user from the array
         presaleBuyers[slot_] = lastUser_; //Swap the duplicated user in the array with the user to remove
         airdropSlot[lastUser_] = slot_; //Update the slot mapping of the duplicated user
+        //Note we do not reset the slot mapping of the removedUser_, as it is not used again, (unless the
+        //removedUser_ buys in the presale again in the future, in which case the slot mapping will be updated).
+
     }
 
 
