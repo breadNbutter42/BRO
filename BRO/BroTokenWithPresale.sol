@@ -611,24 +611,25 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 * It holds no intrinsic value and should not be viewed as an investment opportunity or a financial instrument.
 * It is not a security, as it promises no financial returns to buyers, 
 * and does not rely solely on the efforts of the creators and developers.
-
+*
 * There is no formal development team behind BRO, and it lacks a structured roadmap. 
 * Users should understand the project is experimental and may undergo changes or discontinuation without prior notice.
-
+*
 * BRO serves as a platform for the community to engage in activities,
 * such as liquidity provision and token swapping on the Avalanche blockchain. 
 * It aims to foster community engagement and collaboration, 
 * allowing users to participate in activities that may impact the value of their respective tokens.
-
+*
 * The value of BRO and associated community tokens may be subject to significant volatility and speculative trading. 
 * Users should exercise caution and conduct their own research before engaging with BRO or related activities.
-
+*
 * Participation in BRO-related activities should not be solely reliant on the actions or guidance of developers. 
 * Users are encouraged to take personal responsibility for their involvement and decisions within the BRO ecosystem.
-
+*
 * By interacting with BRO or participating in its associated activities, 
 * users acknowledge and accept the inherent risks involved,
 * and agree to hold harmless the creators and developers of BRO from any liabilities or losses incurred.
+*/
 
 
 /**
