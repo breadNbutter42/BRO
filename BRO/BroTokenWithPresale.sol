@@ -3,22 +3,29 @@
 
 /**
 * This includes presale logic for the $BRO token launch on LFG.gg on Avalanche.
+* 
 * Users can transfer AVAX directly to this contract address during the presale time window.
+* 
 * There is a minimum presale buy in amount of 1 AVAX per transfer.
+* 
 * LP to be trustlessly created after the presale ends, 
 * using half of the $BRO supply and all of the presale AVAX.
-* Note: There are no whale limits or allowlists for the presale, 
-* to allow for open and dynamic presale AVAX collection size ("Fair Launch" style presale)
-* LP is burned since LP fees are automatically converted to more LP for LFJ TraderJoe V1 LPs.
-* Presale buyers' $BRO tokens can be trustlessly "airdropped" out after presale ends.
-* Base token contract imports created with https://wizard.openzeppelin.com/
 * 
-* This contract attempts to conform to Solidity naming convention guidelines with NatSpec comments
-* etc. as per the Solidity Style Guide:
-* https://docs.soliditylang.org/en/stable/style-guide.html#naming-conventions
+* Note: There are no whale limits or allowlists for the presale, 
+* to allow for open and dynamic presale AVAX collection size ("Fair Launch" style presale).
+* 
+* LP is burned since LP fees are automatically converted to more LP for LFJ TraderJoe V1 LPs.
+* 
+* Presale buyers' $BRO tokens can be trustlessly "airdropped" out after presale ends.
 */
 
-
+/**
+* Base token contract imports created with https://wizard.openzeppelin.com/
+* 
+* This contract attempts to conform to Solidity naming convention guidelines, NatSpec comments,
+* and layout ordering, et cetera, as per the Solidity Style Guide:
+* https://docs.soliditylang.org/en/stable/style-guide.html#naming-conventions
+*/
 pragma solidity 0.8.28;
 
 /// OpenZeppelin Contracts (last updated v5.0.0+)
@@ -30,9 +37,12 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 
 interface IUniswapV2Factory {
+
+
     function createPair(address tokenA, address tokenB)
         external
         returns (address pair);
+
 
     function getPair(address tokenA, address tokenB)
         external
@@ -43,7 +53,10 @@ interface IUniswapV2Factory {
 
 /// TraderJoe version of Uniswap code which has AVAX instead of ETH in the function names
 interface ITJUniswapV2Router01 {
+
+
     function factory() external pure returns (address);
+
 
     function addLiquidityAVAX(
         address token,
@@ -97,7 +110,8 @@ interface ITJUniswapV2Router01 {
 
 /// Main contract for the $BRO token with presale airdrop and LP seeding
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
-    /// 420690000000000000000000000000000 token supply in WEI to mint in constructor
+
+    /// 420690000000000000000000000000000 token supply in WEI, to mint in the constructor
     /// 420.69 Trillion in 18 decimal precision, 420,690,000,000,000 . 000,000,000,000,000,000
     uint256 private constant MINT_420_TRILLION_690_BILLION_WEI = 420690 * (10**9) * (10**18);
 
@@ -113,7 +127,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// Remaining BRO is for automated LP
     uint256 public constant LP_BRO_SUPPLY = TOTAL_SUPPLY_TO_MINT - PRESALERS_BRO_SUPPLY;
 
-
     /// Launch on December's New Moon zenith
     /// Unix timestamp of Mon Dec 30 2024 05:27:00 GMT-0500 (EST)
     uint256 private constant NEW_MOON_TIME = 1735554420;
@@ -125,14 +138,14 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// and giving some time for users to collect their tokens from the presale
     uint256 private constant HOURS_TO_PREP_IDO = 2 hours;
 
-    /// LP seeding start time in unix timestamp, must be before IDO_START_TIME
+    /// Cutoff time to buy into the presale, must be before IDO_START_TIME
     uint256 public constant PRESALE_END_TIME = IDO_START_TIME - HOURS_TO_PREP_IDO;
 
     /// Buffer for miner timestamp variance
     uint256 private constant TIMESTAMP_BUFFER = 1 minutes;
 
     /// Date LP seeding and presale tokens dispersal can begin, after presale ends,
-    /// plus a time buffer since miners can vary timestamps
+    /// plus a time buffer since miners can vary timestamps slightly
     uint256 public constant SEEDING_TIME = PRESALE_END_TIME + TIMESTAMP_BUFFER;
 
     /// Length of time the whitelist phase will last, 5 minutes is 300 seconds
@@ -171,7 +184,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     address public immutable LFJ_V1_PAIR_ADDRESS;
 
     /// DEX router interface for swapping BRO and making LP on lfj.gg TraderJoe V1 router
-    ITJUniswapV2Router01 public lfjV1Router;
+    ITJUniswapV2Router01 public immutable LFJ_V1_ROUTER;
 
     /// Array to store presale buyers addresses to send BRO tokens to later
     address[] public presaleBuyers = new address[](0);
@@ -197,7 +210,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// Total AVAX in WEI sent by presale buyers
     mapping(address => uint256) public totalAvaxUserSent;
 
-    /// True if user has claimed their tokens already
+    /// True if user has received their presale tokens already
     mapping(address => bool) public userHasClaimed;
 
     /// BRO tokens received per user during WL phase
@@ -245,7 +258,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     );
 
 
-    /// Check if presale has ended plus buffer time
+    /// Check if presale has ended plus the buffer time
     modifier afterPresale() {
         /// Cannot calculate token ratios until all AVAX is collected and presale ends
         require(block.timestamp >= SEEDING_TIME, "Presale time plus buffer has not yet ended");
@@ -279,9 +292,9 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         _lfjV1Router = ITJUniswapV2Router01(ROUTER_ADDRESS);
         /// Initialize Uniswap V2 BRO/WAVAX LP pair, with 0 LP tokens in it to start with
         _lfjV1PairAddress = IUniswapV2Factory(_lfjV1Router.factory()).createPair(address(this), WAVAX_ADDRESS);
-        lfjV1Router = _lfjV1Router;
+        LFJ_V1_ROUTER = _lfjV1Router;
         LFJ_V1_PAIR_ADDRESS = _lfjV1PairAddress;
-        /// Mint total supply to this contract, to later make LP and do the presale dispersal
+        /// Mint total supply to this contract, to later make LP and do the presale BRO dispersal
         super._update(address(0), address(this), TOTAL_SUPPLY_TO_MINT);
     }
 
@@ -308,14 +321,13 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /**
      * @dev Seeds liquidity pool after presale ends. Must be called once.
      * No arguments, no return. Approves tokens and adds liquidity with collected AVAX.
-     *
      * Reverts if called before presale ended or if LP already seeded.
      */
     function seedLP() external nonReentrant afterPresale notSeeded {
         /// Approve BRO tokens for transfer by the router
         _approve(address(this), ROUTER_ADDRESS, LP_BRO_SUPPLY);
-        /// Seed LFJ V1 LP with all avax collected during presale
-        try lfjV1Router.addLiquidityAVAX{value: totalAvaxPresale}( 
+        /// Seed LFJ V1 LP with all AVAX collected during the presale
+        try LFJ_V1_ROUTER.addLiquidityAVAX{value: totalAvaxPresale}( 
             address(this), 
             /// Seed with remaining BRO supply not assigned to airdrop to presale buyers
             LP_BRO_SUPPLY, 
@@ -328,7 +340,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         } catch {
             revert(string("seedLP() failed"));
         }
-
         lpSeeded = true;
         emit LPSeeded(msg.sender, totalAvaxPresale, LP_BRO_SUPPLY);
     }
@@ -346,8 +357,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     /**
      * @dev Allows user to emergencyWithdraw their AVAX before presale ends and LP seeded.
-     *
-     * Resets user's presale deposit to 0 and removes them from presale array.
+     * Resets user's presale deposit to 0 and removes them from the airdrop array.
      * Reverts if user has no AVAX deposited or LP is seeded.
      */
     function emergencyWithdraw() external nonReentrant notSeeded {
@@ -371,7 +381,6 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /**
      * @dev Airdrops tokens to presale buyers in batches. 
      * `_maximumTransfers` sets how many addresses to process this call.
-     *
      * Reverts if airdrop already completed or presale not ended.
      */
     function airdropBuyers(uint256 _maximumTransfers) external nonReentrant afterPresale seeded {
@@ -382,7 +391,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
     /**
      * @dev Claim tokens for a single user (pull method).
-     * @param _claimer Address of the presale buyer claiming tokens.
+     * @param _claimer Address of the presale buyer to receive tokens.
      * We will allow anyone to send a single user their tokens due.
      * Reverts if user has no tokens to claim or already claimed. 
      * Also reverts if presale not ended or LP not seeded.
@@ -410,7 +419,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// Public functions:
 
 
-    /// @dev Checks if trading is active (LP seeded + IDO_START_TIME reached) .
+    /// @dev Checks if trading is active (LP seeded + IDO_START_TIME reached).
     function tradingActive() public view returns (bool) {
         return (lpSeeded && block.timestamp >= IDO_START_TIME);
     }
@@ -447,11 +456,10 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     /**
-     * @dev Calculate amount of BRO tokens the user purchased after presale ended.
-     * @param _purchaser Address of the user in question.
+     * @dev Calculate amount of BRO tokens the user will be due from the presale.
+     * @param _purchaser Address of the presale purchaser.
      * @return Amount of BRO tokens owed to `_purchaser`.
-     *
-     * Reverts if presale not ended yet (`afterPresale`) .
+     * Reverts if presale has not ended yet (`afterPresale`).
      */ 
     function presaleTokensPurchased(address _purchaser) public view afterPresale returns (uint256) {
         /// Note we cannot precalculate and save this value, as we don't know the total AVAX until presale ends
@@ -464,7 +472,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// Internal functions:
 
 
-    /// @dev Phases check. Overriding ERC20 `_update` for presale and IDO WL logic.
+    /// @dev BRO transfer check. Overriding ERC20 `_update` for presale and IDO WL logic.
     function _update(
         address from_,
         address to_,
@@ -480,12 +488,12 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
             super._update(from_, to_, amount_);
             return;
         }
-        /// Don't limit initial LP seeding, or the presale tokens dispersal, for phases 1 and 2
+        /// Don't limit initial LP seeding, or the presale tokens dispersal
         if (from_ == address(this) && _tradingPhase > 0) {
             super._update(from_, to_, amount_);
             return;
         }
-        /// Check if user is allowed in WL phase
+        /// Check if user is allowed in WL phase 3
         _beforeTokenTransfer(to_, amount_, _tradingPhase);
         super._update(from_, to_, amount_);
     }
@@ -540,16 +548,15 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     /**
-     * @dev Internal helper for user to buy presale tokens by sending `_avaxSpent`.
-     * @param _avaxSpent Amount of AVAX user sent in to buy with in the presale.
+     * @dev Internal helper for user to buy presale tokens.
+     * @param _avaxSpent Amount of AVAX user is sending in.
      * @param _presaleBuyer Address of the presale buyer.
-     *
      * Reverts if presale ended or minimum AVAX buy amount not received .
      */
     function _buyPresale(uint256 _avaxSpent, address _presaleBuyer) private nonReentrant notSeeded {
         require(block.timestamp < PRESALE_END_TIME, "Presale has already ended");
         require(_avaxSpent >= MINIMUM_BUY, "Minimum buy of 1 AVAX per transaction; Not enough AVAX sent");
-        /// Add buyer to the presaleBuyers array if they are a first time buyer
+        /// Add buyer to the presaleBuyers array, if they are a first time buyer
         if (!previousBuyer[_presaleBuyer]) {
             previousBuyer[_presaleBuyer] = true;
             presaleBuyers.push(_presaleBuyer);
@@ -593,7 +600,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     /**
-     * @dev Due to the nature of the division in airdrop calculations, leftover token dust is sent to the last claimant.
+     * @dev Due to the nature of the division in calculations, any leftover token dust is sent to last claimant.
      * @param _lastClaimant Address who receives the final dust remainder.
      */
     function sendDust(address _lastClaimant) private {
@@ -601,6 +608,8 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         _transfer(address(this), _lastClaimant, _dust);
         emit DustSent(_lastClaimant, _dust);
     }
+
+
 }
 
 
@@ -622,7 +631,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 * The value of BRO and associated community tokens may be subject to significant volatility and speculative trading. 
 * Users should exercise caution and conduct their own research before engaging with BRO or related activities.
 *
-* Participation in BRO-related activities should not be solely reliant on the actions or guidance of developers. 
+* Participation in BRO related activities should not be solely reliant on the actions or guidance of developers. 
 * Users are encouraged to take personal responsibility for their involvement and decisions within the BRO ecosystem.
 *
 * By interacting with BRO or participating in its associated activities, 
