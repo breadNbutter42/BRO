@@ -113,12 +113,13 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// Remaining BRO is for automated LP
     uint256 public constant LP_BRO_SUPPLY = TOTAL_SUPPLY_TO_MINT - PRESALERS_BRO_SUPPLY;
 
-    /// Launch on December's full moon zenith
-    /// Unix timestamp of Sun Dec 15 2024 04:15:00 AM EST GMT-0500
-    uint256 private constant FULL_MOON_TIME = 1734254100;
+
+    /// Launch on December's New Moon zenith
+    /// Unix timestamp of Mon Dec 30 2024 05:27:00 GMT-0500 (EST)
+    uint256 private constant NEW_MOON_TIME = 1735554420;
 
     /// Whitelist phase start time in unix timestamp
-    uint256 public constant IDO_START_TIME = FULL_MOON_TIME;
+    uint256 public constant IDO_START_TIME = NEW_MOON_TIME;
 
     /// 2 hours before IDO_START_TIME to prepare for IDO by seeding LP,
     /// and giving some time for users to collect their tokens from the presale
@@ -272,7 +273,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         ERC20Permit("My Bro")
     {
         require(IDO_START_TIME > block.timestamp + 3 hours, "IDO_START_TIME must be > 3 hours from now");
-        require(IDO_START_TIME < block.timestamp + 7 days, "IDO_START_TIME must be < 7 days from now");
+        require(IDO_START_TIME < block.timestamp + 21 days, "IDO_START_TIME must be < 21 days from now");
         ITJUniswapV2Router01 _lfjV1Router;
         address _lfjV1PairAddress;
         _lfjV1Router = ITJUniswapV2Router01(ROUTER_ADDRESS);
@@ -347,7 +348,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
      * @dev Allows user to emergencyWithdraw their AVAX before presale ends and LP seeded.
      *
      * Resets user's presale deposit to 0 and removes them from presale array.
-     * Reverts if user has no AVAX or presale has ended  or LP is seeded.
+     * Reverts if user has no AVAX deposited or LP is seeded.
      */
     function emergencyWithdraw() external nonReentrant notSeeded {
         address _withdrawer = msg.sender;
@@ -356,7 +357,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
         /// Reset user's total AVAX deposited to 0
         totalAvaxUserSent[_withdrawer] = 0; 
         /// Subtract user's AVAX from total AVAX received by all users
-        totalAvaxPresale-= _avaxFromUser; 
+        totalAvaxPresale -= _avaxFromUser; 
         /// Remove user from presaleBuyers airdrop array
         _popAndSwapAirdrop(_withdrawer); 
         /// Send back the user's AVAX deposited
