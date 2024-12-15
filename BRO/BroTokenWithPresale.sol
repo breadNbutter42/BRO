@@ -95,9 +95,7 @@ interface ITJUniswapV2Router01 {
 */
 
 
-/// Main contract for the $BRO token with presale and LP seeding
-
-
+/// Main contract for the $BRO token with presale airdrop and LP seeding
 contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
     /// 420690000000000000000000000000000 token supply in WEI to mint in constructor
     /// 420.69 Trillion in 18 decimal precision, 420,690,000,000,000 . 000,000,000,000,000,000
@@ -594,7 +592,7 @@ contract BroTokenWithPresale is ERC20, ERC20Permit, ReentrancyGuard {
 
 
     /**
-     * @dev Due to the nature of the division in airdrop calculations, leftover token dust is sent here to the last claimant.
+     * @dev Due to the nature of the division in airdrop calculations, leftover token dust is sent to the last claimant.
      * @param _lastClaimant Address who receives the final dust remainder.
      */
     function sendDust(address _lastClaimant) private {
