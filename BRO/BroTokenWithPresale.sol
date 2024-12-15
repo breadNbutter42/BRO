@@ -38,7 +38,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IUniswapV2Factory {
 
-
     function createPair(address tokenA, address tokenB)
         external
         returns (address pair);
@@ -53,7 +52,6 @@ interface IUniswapV2Factory {
 
 /// TraderJoe version of Uniswap code which has AVAX instead of ETH in the function names
 interface ITJUniswapV2Router01 {
-
 
     function factory() external pure returns (address);
 
